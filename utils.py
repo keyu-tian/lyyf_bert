@@ -1,6 +1,7 @@
 import datetime
 import logging
 import subprocess
+import sys
 import time
 
 
@@ -24,13 +25,18 @@ def set_logger(log_path):
     
     if not logger.handlers:
         # Logging to a file
+        formatter = logging.Formatter(
+            fmt='[%(asctime)s][%(filename)10s][line:%(lineno)4d][%(levelname)4s] %(message)s',
+            datefmt='%m-%d %H:%M:%S'
+        )
+        
         file_handler = logging.FileHandler(log_path)
-        file_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s: %(message)s'))
+        file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
         
         # Logging to console
-        stream_handler = logging.StreamHandler()
-        stream_handler.setFormatter(logging.Formatter('%(message)s'))
+        stream_handler = logging.StreamHandler(stream=sys.stdout)
+        stream_handler.setFormatter(formatter)
         logger.addHandler(stream_handler)
 
 
