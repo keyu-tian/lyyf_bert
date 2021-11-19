@@ -20,7 +20,9 @@ function mkd() {
 
 to_proj_root
 
+print "hdfs get bert-base-chinese"
 hdfs dfs -get hdfs://haruna/home/byte_arnold_hl_vc/user/tiankeyu/bert_ckpt/bert-base-chinese/pytorch_model.bin ./pretrained_bert_models/bert-base-chinese
+print "hdfs get chinese_roberta_wwm_large_ext"
 hdfs dfs -get hdfs://haruna/home/byte_arnold_hl_vc/user/tiankeyu/bert_ckpt/chinese_roberta_wwm_large_ext/pytorch_model.bin ./pretrained_bert_models/chinese_roberta_wwm_large_ext
 
 # 16 50 3e-5 0.01 5 0.05

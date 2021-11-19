@@ -18,7 +18,7 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
     # step number in one epoch: 336
     train_losses = 0
     freq = iters // 4
-    for cur_iter in tqdm(range(iters)):
+    for cur_iter in tqdm(range(iters), position=0, leave=True):
         batch_data, batch_token_starts, batch_labels = next(itrt)
         batch_data, batch_token_starts, batch_labels = batch_data.cuda(non_blocking=True), batch_token_starts.cuda(non_blocking=True), batch_labels.cuda(non_blocking=True)
         batch_masks = batch_data.gt(0)  # get padding mask
@@ -108,7 +108,7 @@ def evaluate(iters, itrt, model, mode='dev'):
     dev_losses = 0
 
     with torch.no_grad():
-        for idx in tqdm(range(iters)):
+        for idx in tqdm(range(iters), position=0, leave=True):
             batch_data, batch_token_starts, batch_tags = next(itrt)
             batch_data, batch_token_starts, batch_tags = batch_data.cuda(non_blocking=True), batch_token_starts.cuda(non_blocking=True), batch_tags.cuda(non_blocking=True)
             if mode == 'test':
