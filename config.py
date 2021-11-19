@@ -55,7 +55,6 @@ roberta_model = 'pretrained_bert_models/chinese_roberta_wwm_large_ext/'
 model_dir = os.getcwd() + '/experiments/clue/'
 time_str = datetime.datetime.now().strftime("%m-%d__%H-%M-%S")
 log_dir = model_dir + f'train-{time_str}.log'
-tb_dir = model_dir + f'tb-{time_str}'
 case_dir = os.getcwd() + '/case/bad_case.txt'
 
 # 训练集、验证集划分比例
@@ -79,6 +78,14 @@ fgm_noise = eval(sys.argv[6])       # 0.05
 min_epoch_num = round(epoch_num * 0.1)
 patience = 0.0002
 patience_num = round(epoch_num * 0.3)
+
+hdfs_out = os.environ['ARNOLD_OUTPUT']
+tb_dir = os.path.join(
+    hdfs_out,
+    f'tb_b{batch_size}ep{epoch_num}_'
+    f'lr{learning_rate:g}wd{weight_decay}_'
+    f'clp{clip_grad}_fgm{fgm_noise}'
+)
 
 
 torch.cuda.set_device(0)

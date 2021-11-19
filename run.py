@@ -179,6 +179,9 @@ def run():
 
     tb_lg = SummaryWriter(log_dir=config.tb_dir)
     train(tb_lg, train_iters, train_itrt, dev_iters, dev_itrt, model, fgm, optimizer, scheduler, config.model_dir)
+
+    utils.os_system(f'hdfs dfs -put {config.log_dir} {config.hdfs_out}')
+    utils.os_system(f'hdfs dfs -put data/clue/test* {config.hdfs_out}')
     
     time.sleep(5)
     tb_lg.close()
