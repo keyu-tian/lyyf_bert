@@ -3,5 +3,5 @@
 *.bin
 .ipynb_checkpoints/
 __pycache__/
-*.npz
+test.npz
 
