@@ -1,4 +1,9 @@
+import datetime
 import logging
+
+
+def time_str():
+    return datetime.datetime.now().strftime('[%m-%d %H:%M:%S]')
 
 
 def set_logger(log_path):

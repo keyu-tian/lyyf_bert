@@ -4,18 +4,19 @@ import torch.nn as nn
 from tqdm import tqdm
 
 import config
+from adv import FGM
 from model import BertNER
 from metrics import f1_score, bad_case
 from transformers import BertTokenizer
 
 
-def train_epoch(train_loader, model, optimizer, scheduler, epoch):
+def train_epoch(iters, itrt, model: BertNER, fgm: FGM, optimizer, scheduler, epoch):
     # set model to training mode
     model.train()
     # step number in one epoch: 336
     train_losses = 0
-    for idx, batch_samples in enumerate(tqdm(train_loader)):
-        batch_data, batch_token_starts, batch_labels = batch_samples
+    for idx in tqdm(range(iters)):
+        batch_data, batch_token_starts, batch_labels = next(itrt)
         batch_masks = batch_data.gt(0)  # get padding mask
         # compute model output and loss
         loss = model((batch_data, batch_token_starts),
@@ -27,13 +28,24 @@ def train_epoch(train_loader, model, optimizer, scheduler, epoch):
         # gradient clipping
         nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=config.clip_grad)
         # performs updates using calculated gradients
+
+        if fgm.open():
+            fgm.attack()
+            model.zero_grad()
+            loss = model((batch_data, batch_token_starts),
+                         token_type_ids=None, attention_mask=batch_masks, labels=batch_labels)[0]
+            loss.backward()
+            nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=config.clip_grad)
+            fgm.restore()
+
         optimizer.step()
         scheduler.step()
-    train_loss = float(train_losses) / len(train_loader)
+    
+    train_loss = float(train_losses) / iters
     logging.info("Epoch: {}, train loss: {}".format(epoch, train_loss))
 
 
-def train(train_loader, dev_loader, model, optimizer, scheduler, model_dir):
+def train(train_iters, train_itrt, dev_iters, dev_itrt, model, fgm, optimizer, scheduler, model_dir):
     """train the model and test model performance"""
     # reload weights from restore_dir if specified
     if model_dir is not None and config.load_before:
@@ -44,8 +56,8 @@ def train(train_loader, dev_loader, model, optimizer, scheduler, model_dir):
     patience_counter = 0
     # start training
     for epoch in range(1, config.epoch_num + 1):
-        train_epoch(train_loader, model, optimizer, scheduler, epoch)
-        val_metrics = evaluate(dev_loader, model, mode='dev')
+        train_epoch(train_iters, train_itrt, model, fgm, optimizer, scheduler, epoch)
+        val_metrics = evaluate(dev_iters, dev_itrt, model, mode='dev')
         val_f1 = val_metrics['f1']
         logging.info("Epoch: {}, dev loss: {}, f1 score: {}".format(epoch, val_metrics['loss'], val_f1))
         improve_f1 = val_f1 - best_val_f1
@@ -66,7 +78,7 @@ def train(train_loader, dev_loader, model, optimizer, scheduler, model_dir):
     logging.info("Training Finished!")
 
 
-def evaluate(dev_loader, model, mode='dev'):
+def evaluate(iters, itrt, model, mode='dev'):
     # set model to evaluation mode
     model.eval()
     if mode == 'test':
@@ -78,8 +90,8 @@ def evaluate(dev_loader, model, mode='dev'):
     dev_losses = 0
 
     with torch.no_grad():
-        for idx, batch_samples in enumerate(dev_loader):
-            batch_data, batch_token_starts, batch_tags = batch_samples
+        for idx in tqdm(range(iters)):
+            batch_data, batch_token_starts, batch_tags = next(itrt)
             if mode == 'test':
                 sent_data.extend([[tokenizer.convert_ids_to_tokens(idx.item()) for idx in indices
                                    if (idx.item() > 0 and idx.item() != 101)] for indices in batch_data])
@@ -114,7 +126,7 @@ def evaluate(dev_loader, model, mode='dev'):
         f1_labels, f1 = f1_score(true_tags, pred_tags, mode)
         metrics['f1_labels'] = f1_labels
         metrics['f1'] = f1
-    metrics['loss'] = float(dev_losses) / len(dev_loader)
+    metrics['loss'] = float(dev_losses) / iters
     return metrics
 
 

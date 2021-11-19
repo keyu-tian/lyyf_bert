@@ -1,17 +1,19 @@
-import utils
-import config
 import logging
-import numpy as np
-from data_process import Processor
-from data_loader import NERDataset
-from model import BertNER
-from train import train, evaluate
+import warnings
 
+import numpy as np
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from transformers.optimization import get_cosine_schedule_with_warmup, AdamW
 
-import warnings
+import config
+import utils
+from adv import FGM
+from dataloader import InfiniteBatchSampler
+from datapre import Processor
+from dataset import NERDataset
+from model import BertNER
+from train import train, evaluate
 
 warnings.filterwarnings('ignore')
 
@@ -32,8 +34,17 @@ def test():
     test_dataset = NERDataset(word_test, label_test, config)
     logging.info("--------Dataset Build!--------")
     # build data_loader
-    test_loader = DataLoader(test_dataset, batch_size=config.batch_size,
-                             shuffle=False, collate_fn=test_dataset.collate_fn)
+    test_loader = DataLoader(
+        dataset=test_dataset, num_workers=10, pin_memory=True,
+        batch_sampler=InfiniteBatchSampler(
+            dataset_len=len(test_dataset), batch_size=config.batch_size * 2,
+            shuffle=False, filling=False, drop_last=False,
+        ),
+        collate_fn=test_dataset.collate_fn
+    )
+    test_iters, test_itrt = len(test_loader), iter(test_loader)
+    logging.info(f"[dataset] test : len={len(test_dataset)}, bs={config.batch_size*2}, iters={test_iters}")
+    
     logging.info("--------Get Data-loader!--------")
     # Prepare model
     if config.model_dir is not None:
@@ -43,7 +54,7 @@ def test():
     else:
         logging.info("--------No model to test !--------")
         return
-    val_metrics = evaluate(test_loader, model, mode='test')
+    val_metrics = evaluate(test_iters, test_itrt, model, mode='test')
     val_f1 = val_metrics['f1']
     logging.info("test loss: {}, f1 score: {}".format(val_metrics['loss'], val_f1))
     val_f1_labels = val_metrics['f1_labels']
@@ -75,6 +86,19 @@ def run():
     # set the logger
     utils.set_logger(config.log_dir)
     logging.info("device: {}".format(config.device))
+
+    logging.info(f"=========== config ===========")
+    logging.info(f"==> bs  : {config.batch_size}")
+    logging.info(f"==> ep  : {config.epoch_num}")
+    logging.info(f"==> lr  : {config.learning_rate:g}")
+    logging.info(f"==> wd  : {config.weight_decay}")
+    logging.info(f"==> clip: {config.clip_grad}")
+    logging.info(f"==> fgm : {config.fgm_noise}")
+    logging.info(f"========== defaults ==========")
+    logging.info(f"==> min_epoch_num: {config.min_epoch_num}")
+    logging.info(f"==> patience: {config.patience}")
+    logging.info(f"==> patience_num: {config.patience_num}")
+    
     # 处理数据，分离文本和标签
     processor = Processor(config)
     processor.process()
@@ -85,13 +109,33 @@ def run():
     train_dataset = NERDataset(word_train, label_train, config)
     dev_dataset = NERDataset(word_dev, label_dev, config)
     logging.info("--------Dataset Build!--------")
-    # get dataset size
-    train_size = len(train_dataset)
     # build data_loader
-    train_loader = DataLoader(train_dataset, batch_size=config.batch_size,
-                              shuffle=True, collate_fn=train_dataset.collate_fn)
-    dev_loader = DataLoader(dev_dataset, batch_size=config.batch_size,
-                            shuffle=True, collate_fn=dev_dataset.collate_fn)
+    # train_loader = DataLoader(train_dataset, batch_size=config.batch_size,
+    #                           shuffle=True, collate_fn=train_dataset.collate_fn)
+    # dev_loader = DataLoader(dev_dataset, batch_size=config.batch_size,
+    #                         shuffle=True, collate_fn=dev_dataset.collate_fn)
+
+    train_loader = DataLoader(
+        dataset=train_dataset, num_workers=10, pin_memory=True,
+        batch_sampler=InfiniteBatchSampler(
+            dataset_len=len(train_dataset), batch_size=config.batch_size,
+            shuffle=True, filling=False, drop_last=True,
+        ),
+        collate_fn=train_dataset.collate_fn
+    )
+    train_iters, train_itrt = len(train_loader), iter(train_loader)
+    logging.info(f"[dataset] train: len={len(train_dataset)}, bs={config.batch_size}, iters={train_iters}")
+    dev_loader = DataLoader(
+        dataset=dev_dataset, num_workers=10, pin_memory=True,
+        batch_sampler=InfiniteBatchSampler(
+            dataset_len=len(dev_dataset), batch_size=config.batch_size * 2,
+            shuffle=False, filling=False, drop_last=False,
+        ),
+        collate_fn=dev_dataset.collate_fn
+    )
+    dev_iters, dev_itrt = len(dev_loader), iter(dev_loader)
+    logging.info(f"[dataset] dev  : len={len(dev_dataset)}, bs={config.batch_size*2}, iters={dev_iters}")
+    
     logging.info("--------Get Dataloader!--------")
     # Prepare model
     device = config.device
@@ -124,14 +168,14 @@ def run():
         param_optimizer = list(model.classifier.named_parameters())
         optimizer_grouped_parameters = [{'params': [p for n, p in param_optimizer]}]
     optimizer = AdamW(optimizer_grouped_parameters, lr=config.learning_rate, correct_bias=False)
-    train_steps_per_epoch = train_size // config.batch_size
     scheduler = get_cosine_schedule_with_warmup(optimizer,
-                                                num_warmup_steps=(config.epoch_num // 10) * train_steps_per_epoch,
-                                                num_training_steps=config.epoch_num * train_steps_per_epoch)
+                                                num_warmup_steps=config.epoch_num * train_iters // 10,
+                                                num_training_steps=config.epoch_num * train_iters)
 
     # Train the model
     logging.info("--------Start Training!--------")
-    train(train_loader, dev_loader, model, optimizer, scheduler, config.model_dir)
+    fgm = FGM(model, config.fgm_noise)
+    train(train_iters, train_itrt, dev_iters, dev_itrt, model, fgm, optimizer, scheduler, config.model_dir)
 
 
 if __name__ == '__main__':
