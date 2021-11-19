@@ -49,6 +49,8 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
         if cur_iter % freq == 0:
             tb_lg.add_scalar('iter/train_loss', cur_loss, iters*epoch + cur_iter)
             tb_lg.add_scalar('iter/norm', total_norm, iters*epoch + cur_iter)
+        
+        del batch_data, batch_token_starts, batch_labels, loss
     
     train_loss = float(train_losses) / iters
     logging.info(f"Epoch: {epoch:-3d}/{epoch}, train loss: {train_loss}")
@@ -68,6 +70,7 @@ def train(tb_lg: SummaryWriter, train_iters, train_itrt, dev_iters, dev_itrt, mo
     # start training
     for epoch in range(1, config.epoch_num + 1):
         train_epoch(tb_lg, train_iters, train_itrt, model, fgm, optimizer, scheduler, epoch)
+        torch.cuda.empty_cache()
         val_metrics = evaluate(dev_iters, dev_itrt, model, mode='dev')
         val_f1 = val_metrics['f1']
         logging.info("Epoch: {}, dev loss: {}, f1 score: {}".format(epoch, val_metrics['loss'], val_f1))
