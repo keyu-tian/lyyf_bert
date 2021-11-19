@@ -1,32 +1,37 @@
-import torch
 import logging
+
+import torch
 import torch.nn as nn
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
+from transformers import BertTokenizer
 
 import config
 from adv import FGM
-from model import BertNER
 from metrics import f1_score, bad_case
-from transformers import BertTokenizer
+from model import BertNER
 
 
-def train_epoch(iters, itrt, model: BertNER, fgm: FGM, optimizer, scheduler, epoch):
+def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, scheduler, epoch):
     # set model to training mode
     model.train()
     # step number in one epoch: 336
     train_losses = 0
-    for idx in tqdm(range(iters)):
+    freq = iters // 4
+    for cur_iter in tqdm(range(iters)):
         batch_data, batch_token_starts, batch_labels = next(itrt)
+        batch_data, batch_token_starts, batch_labels = batch_data.cuda(non_blocking=True), batch_token_starts.cuda(non_blocking=True), batch_labels.cuda(non_blocking=True)
         batch_masks = batch_data.gt(0)  # get padding mask
         # compute model output and loss
         loss = model((batch_data, batch_token_starts),
                      token_type_ids=None, attention_mask=batch_masks, labels=batch_labels)[0]
-        train_losses += loss.item()
+        cur_loss = loss.item()
+        train_losses += cur_loss
         # clear previous gradients, compute gradients of all variables wrt loss
         model.zero_grad()
         loss.backward()
         # gradient clipping
-        nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=config.clip_grad)
+        total_norm = nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=config.clip_grad)
         # performs updates using calculated gradients
 
         if fgm.open():
@@ -35,32 +40,45 @@ def train_epoch(iters, itrt, model: BertNER, fgm: FGM, optimizer, scheduler, epo
             loss = model((batch_data, batch_token_starts),
                          token_type_ids=None, attention_mask=batch_masks, labels=batch_labels)[0]
             loss.backward()
-            nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=config.clip_grad)
+            total_norm = nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=config.clip_grad)
             fgm.restore()
 
         optimizer.step()
         scheduler.step()
+        
+        if cur_iter % freq == 0:
+            tb_lg.add_scalar('iter/train_loss', cur_loss, iters*epoch + cur_iter)
+            tb_lg.add_scalar('iter/norm', total_norm, iters*epoch + cur_iter)
     
     train_loss = float(train_losses) / iters
-    logging.info("Epoch: {}, train loss: {}".format(epoch, train_loss))
+    logging.info(f"Epoch: {epoch:-3d}/{epoch}, train loss: {train_loss}")
+    tb_lg.add_scalar('epoch/train_loss', train_loss, epoch)
+    tb_lg.flush()
 
 
-def train(train_iters, train_itrt, dev_iters, dev_itrt, model, fgm, optimizer, scheduler, model_dir):
+def train(tb_lg: SummaryWriter, train_iters, train_itrt, dev_iters, dev_itrt, model, fgm, optimizer, scheduler, model_dir):
     """train the model and test model performance"""
     # reload weights from restore_dir if specified
     if model_dir is not None and config.load_before:
         model = BertNER.from_pretrained(model_dir)
-        model.to(config.device)
+        model.cuda()
         logging.info("--------Load model from {}--------".format(model_dir))
     best_val_f1 = 0.0
     patience_counter = 0
     # start training
     for epoch in range(1, config.epoch_num + 1):
-        train_epoch(train_iters, train_itrt, model, fgm, optimizer, scheduler, epoch)
+        train_epoch(tb_lg, train_iters, train_itrt, model, fgm, optimizer, scheduler, epoch)
         val_metrics = evaluate(dev_iters, dev_itrt, model, mode='dev')
         val_f1 = val_metrics['f1']
         logging.info("Epoch: {}, dev loss: {}, f1 score: {}".format(epoch, val_metrics['loss'], val_f1))
         improve_f1 = val_f1 - best_val_f1
+
+        tb_lg.add_scalar('epoch/val_loss', val_metrics['loss'], epoch)
+        tb_lg.add_scalar('epoch/val_F1', val_f1, epoch)
+        tb_lg.add_scalar('epoch/improve_f1', val_f1, epoch)
+        tb_lg.add_scalar('epoch/zpatience_cnt', patience_counter, epoch)
+        tb_lg.flush()
+        
         if improve_f1 > 1e-5:
             best_val_f1 = val_f1
             model.save_pretrained(model_dir)
@@ -92,6 +110,7 @@ def evaluate(iters, itrt, model, mode='dev'):
     with torch.no_grad():
         for idx in tqdm(range(iters)):
             batch_data, batch_token_starts, batch_tags = next(itrt)
+            batch_data, batch_token_starts, batch_tags = batch_data.cuda(non_blocking=True), batch_token_starts.cuda(non_blocking=True), batch_tags.cuda(non_blocking=True)
             if mode == 'test':
                 sent_data.extend([[tokenizer.convert_ids_to_tokens(idx.item()) for idx in indices
                                    if (idx.item() > 0 and idx.item() != 101)] for indices in batch_data])

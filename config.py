@@ -53,7 +53,9 @@ files = ['train', 'test']
 bert_model = 'pretrained_bert_models/bert-base-chinese/'
 roberta_model = 'pretrained_bert_models/chinese_roberta_wwm_large_ext/'
 model_dir = os.getcwd() + '/experiments/clue/'
-log_dir = model_dir + f'train-{datetime.datetime.now().strftime("%m-%d=%H-%M-%S")}.log'
+time_str = datetime.datetime.now().strftime("%m-%d__%H-%M-%S")
+log_dir = model_dir + f'train-{time_str}.log'
+tb_dir = model_dir + f'tb-{time_str}'
 case_dir = os.getcwd() + '/case/bad_case.txt'
 
 # 训练集、验证集划分比例
@@ -79,12 +81,8 @@ patience = 0.0002
 patience_num = round(epoch_num * 0.3)
 
 
-gpu = '0'# todo: 0
-
-if gpu != '':
-    device = torch.device(f"cuda:{gpu}")
-else:
-    device = torch.device("cpu")
+torch.cuda.set_device(0)
+device = torch.empty(1).cuda().device
 
 # labels = ['address', 'book', 'company', 'game', 'government',
 #           'movie', 'name', 'organization', 'position', 'scene']

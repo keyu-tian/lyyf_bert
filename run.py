@@ -1,9 +1,11 @@
 import logging
+import time
 import warnings
 
 import numpy as np
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from transformers.optimization import get_cosine_schedule_with_warmup, AdamW
 
 import config
@@ -49,7 +51,7 @@ def test():
     # Prepare model
     if config.model_dir is not None:
         model = BertNER.from_pretrained(config.model_dir)
-        model.to(config.device)
+        model.cuda()
         logging.info("--------Load model from {}--------".format(config.model_dir))
     else:
         logging.info("--------No model to test !--------")
@@ -87,14 +89,14 @@ def run():
     utils.set_logger(config.log_dir)
     logging.info("device: {}".format(config.device))
 
-    logging.info(f"=========== config ===========")
+    logging.info(f"======= config =======")
     logging.info(f"==> bs  : {config.batch_size}")
     logging.info(f"==> ep  : {config.epoch_num}")
     logging.info(f"==> lr  : {config.learning_rate:g}")
     logging.info(f"==> wd  : {config.weight_decay}")
     logging.info(f"==> clip: {config.clip_grad}")
     logging.info(f"==> fgm : {config.fgm_noise}")
-    logging.info(f"========== defaults ==========")
+    logging.info(f"====== defaults ======")
     logging.info(f"==> min_epoch_num: {config.min_epoch_num}")
     logging.info(f"==> patience: {config.patience}")
     logging.info(f"==> patience_num: {config.patience_num}")
@@ -138,9 +140,8 @@ def run():
     
     logging.info("--------Get Dataloader!--------")
     # Prepare model
-    device = config.device
     model = BertNER.from_pretrained(config.roberta_model, num_labels=len(config.label2id))
-    model.to(device)
+    model.cuda()
     # Prepare optimizer
     if config.full_fine_tuning:
         # model.named_parameters(): [bert, bilstm, classifier, crf]
@@ -175,8 +176,13 @@ def run():
     # Train the model
     logging.info("--------Start Training!--------")
     fgm = FGM(model, config.fgm_noise)
-    train(train_iters, train_itrt, dev_iters, dev_itrt, model, fgm, optimizer, scheduler, config.model_dir)
 
+    tb_lg = SummaryWriter(log_dir=config.tb_dir)
+    train(tb_lg, train_iters, train_itrt, dev_iters, dev_itrt, model, fgm, optimizer, scheduler, config.model_dir)
+    
+    time.sleep(5)
+    tb_lg.close()
+    
 
 if __name__ == '__main__':
     run()
