@@ -53,6 +53,7 @@ files = ['train', 'test']
 bert_model = 'pretrained_bert_models/bert-base-chinese/'
 roberta_model = 'pretrained_bert_models/chinese_roberta_wwm_large_ext/'
 model_dir = os.getcwd() + '/experiments/clue/'
+ckpt_dir = model_dir + 'pytorch_model.bin'
 time_str = datetime.datetime.now().strftime("%m-%d__%H-%M-%S")
 log_dir = model_dir + f'train-{time_str}.log'
 case_dir = os.getcwd() + '/case/bad_case.txt'

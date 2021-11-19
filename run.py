@@ -63,7 +63,6 @@ def test():
     for label in config.labels:
         logging.info("f1 score of {}: {}".format(label, val_f1_labels[label]))
 
-    utils.os_system(f'hdfs dfs -put {config.log_dir} {config.hdfs_out}')
     utils.os_system(f'hdfs dfs -put data/clue/test* {config.hdfs_out}')
 
 
@@ -185,6 +184,9 @@ def run():
 
     time.sleep(5)
     tb_lg.close()
+
+    utils.os_system(f'hdfs dfs -put {config.log_dir} {config.hdfs_out}')
+    utils.os_system(f'hdfs dfs -put {config.ckpt_dir} {config.hdfs_out}')
     
 
 if __name__ == '__main__':
