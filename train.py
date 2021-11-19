@@ -78,7 +78,7 @@ def train(tb_lg: SummaryWriter, train_iters, train_itrt, dev_iters, dev_itrt, mo
 
         tb_lg.add_scalar('epoch/val_loss', val_metrics['loss'], epoch)
         tb_lg.add_scalar('epoch/val_F1', val_f1, epoch)
-        tb_lg.add_scalar('epoch/improve_f1', val_f1, epoch)
+        tb_lg.add_scalar('epoch/improve_f1', improve_f1, epoch)
         tb_lg.add_scalar('epoch/zpatience_cnt', patience_counter, epoch)
         tb_lg.flush()
         
