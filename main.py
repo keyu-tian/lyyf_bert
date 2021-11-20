@@ -39,13 +39,13 @@ def test():
     test_loader = DataLoader(
         dataset=test_dataset, num_workers=10, pin_memory=True,
         batch_sampler=InfiniteBatchSampler(
-            dataset_len=len(test_dataset), batch_size=config.batch_size * 2,
+            dataset_len=len(test_dataset), batch_size=config.batch_size,
             shuffle=False, filling=False, drop_last=False,
         ),
         collate_fn=test_dataset.collate_fn
     )
     test_iters, test_itrt = len(test_loader), iter(test_loader)
-    logging.info(f"[dataset] test : len={len(test_dataset)}, bs={config.batch_size*2}, iters={test_iters}")
+    logging.info(f"[dataset] test : len={len(test_dataset)}, bs={config.batch_size}, iters={test_iters}")
     
     logging.info("--------Get Data-loader!--------")
     # Prepare model
@@ -133,13 +133,13 @@ def run():
     dev_loader = DataLoader(
         dataset=dev_dataset, num_workers=10, pin_memory=True,
         batch_sampler=InfiniteBatchSampler(
-            dataset_len=len(dev_dataset), batch_size=config.batch_size * 2,
+            dataset_len=len(dev_dataset), batch_size=config.batch_size,
             shuffle=False, filling=False, drop_last=False,
         ),
         collate_fn=dev_dataset.collate_fn
     )
     dev_iters, dev_itrt = len(dev_loader), iter(dev_loader)
-    logging.info(f"[dataset] dev  : len={len(dev_dataset)}, bs={config.batch_size*2}, iters={dev_iters}")
+    logging.info(f"[dataset] dev  : len={len(dev_dataset)}, bs={config.batch_size}, iters={dev_iters}")
     
     logging.info("--------Get Dataloader!--------")
     # Prepare model
