@@ -33,18 +33,17 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
         cur_loss = loss.item()
         train_losses += cur_loss
         # clear previous gradients, compute gradients of all variables wrt loss
-        model.zero_grad()
         if config.loss_to > 0:
             tp = cur_loss
             while tp > config.loss_to:
                 tp /= config.loss_to
                 loss /= config.loss_to
+                
+        model.zero_grad()
         loss.backward()
-        # gradient clipping
         bert_norm = nn.utils.clip_grad_norm_(parameters=model.bert.parameters(), max_norm=config.clip_grad * 8)
         lstm_norm = nn.utils.clip_grad_norm_(parameters=model.bilstm.parameters(), max_norm=config.clip_grad)
         clsf_norm = nn.utils.clip_grad_norm_(parameters=model.classifier.parameters(), max_norm=config.clip_grad)
-        # performs updates using calculated gradients
 
         if fgm.open():
             fgm.attack()
@@ -58,10 +57,12 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
                 while tp > config.loss_to:
                     tp /= config.loss_to
                     loss /= config.loss_to
+                    
             loss.backward()
             bert_norm = nn.utils.clip_grad_norm_(parameters=model.bert.parameters(), max_norm=config.clip_grad * 8)
             lstm_norm = nn.utils.clip_grad_norm_(parameters=model.bilstm.parameters(), max_norm=config.clip_grad)
             clsf_norm = nn.utils.clip_grad_norm_(parameters=model.classifier.parameters(), max_norm=config.clip_grad)
+            
             fgm.restore()
 
         optimizer.step()
