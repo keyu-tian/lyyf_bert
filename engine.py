@@ -44,7 +44,7 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
                 loss /= config.loss_to
         loss.backward()
         # gradient clipping
-        bert_norm = nn.utils.clip_grad_norm_(parameters=model.bert.parameters(), max_norm=config.clip_grad)
+        bert_norm = nn.utils.clip_grad_norm_(parameters=model.bert.parameters(), max_norm=config.clip_grad * 8)
         lstm_norm = nn.utils.clip_grad_norm_(parameters=model.bilstm.parameters(), max_norm=config.clip_grad)
         clsf_norm = nn.utils.clip_grad_norm_(parameters=model.classifier.parameters(), max_norm=config.clip_grad)
         # performs updates using calculated gradients
@@ -62,7 +62,7 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
                     tp /= config.loss_to
                     loss /= config.loss_to
             loss.backward()
-            bert_norm = nn.utils.clip_grad_norm_(parameters=model.bert.parameters(), max_norm=config.clip_grad)
+            bert_norm = nn.utils.clip_grad_norm_(parameters=model.bert.parameters(), max_norm=config.clip_grad * 8)
             lstm_norm = nn.utils.clip_grad_norm_(parameters=model.bilstm.parameters(), max_norm=config.clip_grad)
             clsf_norm = nn.utils.clip_grad_norm_(parameters=model.classifier.parameters(), max_norm=config.clip_grad)
             fgm.restore()
@@ -128,7 +128,7 @@ def train(tb_lg: SummaryWriter, train_iters, train_itrt, dev_iters, dev_itrt, mo
             logging.info("Best val f1: {}".format(best_val_f1))
             break
         
-        if epoch == config.epoch_num or epoch % 4 == 0:
+        if epoch == config.epoch_num or epoch % 6 == 0:
             os_system(f'hdfs dfs -put -f {config.log_path} {config.hdfs_localout}')
         
     logging.info("Training Finished!")

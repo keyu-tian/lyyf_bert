@@ -69,15 +69,15 @@ full_fine_tuning = True
 
 # hyper-parameter
 # 16 30 1e-5 0.1 50 10 0.3 -1
-batch_size = eval(sys.argv[1])      # 16
-epoch_num = eval(sys.argv[2])       # 50
-learning_rate = eval(sys.argv[3])   # 3e-5
-weight_decay = eval(sys.argv[4])    # 0.01
-clip_grad = eval(sys.argv[5])       # 5
-fgm_noise = eval(sys.argv[6])       # 3
-drop1 = eval(sys.argv[7])           # 0.3
-drop2 = eval(sys.argv[8])           # 0.5
-loss_to = eval(sys.argv[9])         # 10    or -1
+batch_size = eval(sys.argv[2])      # 16
+epoch_num = eval(sys.argv[3])       # 50
+learning_rate = eval(sys.argv[4])   # 3e-5
+weight_decay = eval(sys.argv[5])    # 0.01
+clip_grad = eval(sys.argv[6])       # 5
+fgm_noise = eval(sys.argv[7])       # 3
+drop1 = eval(sys.argv[8])           # 0.3
+drop2 = eval(sys.argv[9])           # 0.5
+loss_to = eval(sys.argv[10])        # 10    or -1
 
 
 min_epoch_num = round(epoch_num * 0.1)
@@ -87,11 +87,12 @@ patience_num = round(epoch_num * 0.3)
 hdfs_localout = os.path.join(os.environ['ARNOLD_OUTPUT'], 'local_output')
 tb_dir = os.path.join(
     os.environ['ARNOLD_OUTPUT'],
-    f'tb'
+    f'{sys.argv[1]}'
     f'_b{batch_size}ep{epoch_num}'
     f'_lr{learning_rate:g}wd{weight_decay}'
     f'_clp{clip_grad}fgm{fgm_noise}'
-    f'_drp{drop1}Lto{loss_to}'
+    f'_drp{drop1}_{drop2}'
+    f'_Lto{loss_to}'
 )
 
 
