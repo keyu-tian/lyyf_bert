@@ -14,6 +14,9 @@ from utils import time_str, os_system
 
 
 def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, scheduler, epoch):
+    true_tags = []
+    pred_tags = []
+    
     # set model to training mode
     model.train()
     # step number in one epoch: 336
@@ -25,9 +28,11 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
         batch_data, batch_token_starts, batch_labels = next(itrt)
         batch_data, batch_token_starts, batch_labels = batch_data.cuda(non_blocking=True), batch_token_starts.cuda(non_blocking=True), batch_labels.cuda(non_blocking=True)
         batch_masks = batch_data.gt(0)  # get padding mask
+        label_masks = batch_labels.gt(-1)
         # compute model output and loss
-        loss = model((batch_data, batch_token_starts),
-                     token_type_ids=None, attention_mask=batch_masks, labels=batch_labels)[0]
+        loss, batch_output = model((batch_data, batch_token_starts),
+                     token_type_ids=None, attention_mask=batch_masks, labels=batch_labels)
+        batch_output = model.crf.decode(batch_output.detach(), mask=label_masks)
         cur_loss = loss.item()
         train_losses += cur_loss
         # clear previous gradients, compute gradients of all variables wrt loss
@@ -47,8 +52,9 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
         if fgm.open():
             fgm.attack()
             model.zero_grad()
-            loss = model((batch_data, batch_token_starts),
-                         token_type_ids=None, attention_mask=batch_masks, labels=batch_labels)[0]
+            loss, batch_output = model((batch_data, batch_token_starts),
+                         token_type_ids=None, attention_mask=batch_masks, labels=batch_labels)
+            batch_output = model.crf.decode(batch_output.detach(), mask=label_masks)
             cur_loss = loss.item()
             if config.loss_to > 0:
                 tp = cur_loss
@@ -70,11 +76,16 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
             tb_lg.add_scalar('norm/lstm', lstm_norm, iters*epoch + cur_iter)
             tb_lg.add_scalar('norm/clsf', clsf_norm, iters*epoch + cur_iter)
         
+        pred_tags.extend([[config.id2label.get(idx) for idx in indices] for indices in batch_output])
+        true_tags.extend([[config.id2label.get(idx) for idx in indices if idx > -1] for indices in batch_labels])
+        
         del batch_data, batch_token_starts, batch_labels, loss
     
+    train_f1 = f1_score(true_tags, pred_tags, mode='dev') # todo: lyyf看mode='dev'对不对？
     train_loss = float(train_losses) / iters
-    logging.info(f"Epoch: {epoch:-3d}/{epoch}, train loss: {train_loss}")
+    logging.info(f"Epoch: {epoch:-3d}/{epoch}, train loss: {train_loss}, train f1: {train_f1}")
     tb_lg.add_scalar('epoch/train_loss', train_loss, epoch)
+    tb_lg.add_scalar('epoch/train_f1', train_f1, epoch)
     tb_lg.flush()
 
 
@@ -128,7 +139,6 @@ def evaluate(iters, itrt, model, mode='dev'):
     model.eval()
     if mode == 'test':
         tokenizer = BertTokenizer.from_pretrained(config.bert_model, do_lower_case=True, skip_special_tokens=True)
-    id2label = config.id2label
     true_tags = []
     pred_tags = []
     sent_data = []
@@ -138,16 +148,16 @@ def evaluate(iters, itrt, model, mode='dev'):
         bar = tqdm(range(iters), position=0, leave=True)
         for idx in bar:
             bar.set_description(time_str())
-            batch_data, batch_token_starts, batch_tags = next(itrt)
-            batch_data, batch_token_starts, batch_tags = batch_data.cuda(non_blocking=True), batch_token_starts.cuda(non_blocking=True), batch_tags.cuda(non_blocking=True)
+            batch_data, batch_token_starts, batch_labels = next(itrt)
+            batch_data, batch_token_starts, batch_labels = batch_data.cuda(non_blocking=True), batch_token_starts.cuda(non_blocking=True), batch_labels.cuda(non_blocking=True)
             if mode == 'test':
                 sent_data.extend([[tokenizer.convert_ids_to_tokens(idx.item()) for idx in indices
                                    if (idx.item() > 0 and idx.item() != 101)] for indices in batch_data])
             batch_masks = batch_data.gt(0)  # get padding mask, gt(x): get index greater than x
-            label_masks = batch_tags.gt(-1)  # get padding mask, gt(x): get index greater than x
+            label_masks = batch_labels.gt(-1)  # get padding mask, gt(x): get index greater than x
             # compute model output and loss
             loss = model((batch_data, batch_token_starts),
-                         token_type_ids=None, attention_mask=batch_masks, labels=batch_tags)[0]
+                         token_type_ids=None, attention_mask=batch_masks, labels=batch_labels)[0]
             dev_losses += loss.item()
             # (batch_size, max_len, num_labels)
             batch_output = model((batch_data, batch_token_starts),
@@ -155,10 +165,10 @@ def evaluate(iters, itrt, model, mode='dev'):
             # (batch_size, max_len - padding_label_len)
             batch_output = model.crf.decode(batch_output, mask=label_masks)
             # (batch_size, max_len)
-            batch_tags = batch_tags.to('cpu').numpy()
-            pred_tags.extend([[id2label.get(idx) for idx in indices] for indices in batch_output])
+            batch_labels = batch_labels.to('cpu').numpy()
+            pred_tags.extend([[config.id2label.get(idx) for idx in indices] for indices in batch_output])
             # (batch_size, max_len - padding_label_len)
-            true_tags.extend([[id2label.get(idx) for idx in indices if idx > -1] for indices in batch_tags])
+            true_tags.extend([[config.id2label.get(idx) for idx in indices if idx > -1] for indices in batch_labels])
 
     assert len(pred_tags) == len(true_tags)
     if mode == 'test':

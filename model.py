@@ -4,6 +4,7 @@ import torch.nn as nn
 from torch.nn.utils.rnn import pad_sequence
 
 import config as proj_config
+from utils import time_str
 
 
 class BertNER(BertPreTrainedModel):
@@ -25,10 +26,10 @@ class BertNER(BertPreTrainedModel):
         self.classifier = nn.Linear(config.hidden_size, config.num_labels)
         self.crf = CRF(config.num_labels, batch_first=True)
 
-        print(f"=========== config ===========", flush=True)
-        print(f"==> dr before lstm : {proj_config.drop_rate}", flush=True)
-        print(f"==> dr within lstm : {config.lstm_dropout_prob}", flush=True)
-        print(f"==> dr before clsf : {proj_config.drop_rate}", flush=True)
+        print(f"{time_str()} =========== config ===========", flush=True)
+        print(f"{time_str()} ==> dr before lstm : {proj_config.drop_rate}", flush=True)
+        print(f"{time_str()} ==> dr within lstm : {config.lstm_dropout_prob}", flush=True)
+        print(f"{time_str()} ==> dr before clsf : {proj_config.drop_rate}", flush=True)
 
         self.init_weights()
 
@@ -55,11 +56,12 @@ class BertNER(BertPreTrainedModel):
         
         self.drop_before_fc(lstm_output)
         logits = self.classifier(lstm_output)
-        outputs = (logits,)
         if labels is not None:
             loss_mask = labels.gt(-1)
             loss = self.crf(logits, labels, loss_mask) * (-1)
-            outputs = (loss,) + outputs
+            outputs = (loss, logits)
+        else:
+            outputs = (logits,)
 
         # contain: (loss), scores
         return outputs
