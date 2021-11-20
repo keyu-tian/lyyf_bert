@@ -189,7 +189,12 @@ def run():
     fgm = FGM(model, config.fgm_noise)
 
     tb_lg = SummaryWriter(log_dir=config.tb_dir)
-    best_val_f1 = train(tb_lg, train_iters, train_itrt, dev_iters, dev_itrt, model, fgm, optimizer, scheduler, config.save_dir)
+    # best_val_f1 = train(tb_lg, train_iters, train_itrt, dev_iters, dev_itrt, model, fgm, optimizer, scheduler, config.save_dir)
+    
+    best_val_f1 = 84.10
+    utils.os_system(f'rm -rf {config.ckpt_path}')
+    utils.os_system(f'hdfs dfs -get hdfs://haruna/home/byte_arnold_lq/vc/tiankeyu/run_trial/tasks/1635894/trials/4275389/output/pytorch_model.bin {config.save_dir}')
+    
     config.badcase_path = config.badcase_path.replace(
         'xxxx',
         f'{best_val_f1*100:2f}'
