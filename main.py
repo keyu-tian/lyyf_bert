@@ -38,7 +38,7 @@ def test():
     logging.info("--------Dataset Build!--------")
     # build data_loader
     test_loader = DataLoader(
-        dataset=test_dataset, num_workers=10, pin_memory=True,
+        dataset=test_dataset, pin_memory=True,
         batch_sampler=InfiniteBatchSampler(
             dataset_len=len(test_dataset), batch_size=config.batch_size,
             shuffle=False, filling=False, drop_last=False,
@@ -57,7 +57,7 @@ def test():
     else:
         logging.info("--------No model to test !--------")
         return
-    val_metrics = evaluate(test_iters, test_itrt, model, mode='test')
+    val_metrics = evaluate(test_iters, test_itrt, model, mode='test', epoch=0)
     val_f1 = val_metrics['f1']
     logging.info("test loss: {}, f1 score: {}".format(val_metrics['loss'], val_f1))
     val_f1_labels = val_metrics['f1_labels']
@@ -122,7 +122,7 @@ def run():
     #                         shuffle=True, collate_fn=dev_dataset.collate_fn)
 
     train_loader = DataLoader(
-        dataset=train_dataset, num_workers=10, pin_memory=True,
+        dataset=train_dataset, pin_memory=True,
         batch_sampler=InfiniteBatchSampler(
             dataset_len=len(train_dataset), batch_size=config.batch_size,
             shuffle=True, filling=False, drop_last=True,
@@ -132,7 +132,7 @@ def run():
     train_iters, train_itrt = len(train_loader), iter(train_loader)
     logging.info(f"[dataset] train: len={len(train_dataset)}, bs={config.batch_size}, iters={train_iters}")
     dev_loader = DataLoader(
-        dataset=dev_dataset, num_workers=10, pin_memory=True,
+        dataset=dev_dataset, pin_memory=True,
         batch_sampler=InfiniteBatchSampler(
             dataset_len=len(dev_dataset), batch_size=config.batch_size,
             shuffle=False, filling=False, drop_last=False,

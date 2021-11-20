@@ -24,7 +24,7 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
     freq = iters // 4
     bar = tqdm(range(iters), position=0, leave=True)
     for cur_iter in bar:
-        bar.set_description(time_str())
+        bar.set_description(time_str() + f'[{epoch}]')
         batch_data, batch_token_starts, batch_labels = next(itrt)
         batch_data, batch_token_starts, batch_labels = batch_data.cuda(non_blocking=True), batch_token_starts.cuda(non_blocking=True), batch_labels.cuda(non_blocking=True)
         batch_masks = batch_data.gt(0)  # get padding mask
@@ -102,7 +102,7 @@ def train(tb_lg: SummaryWriter, train_iters, train_itrt, dev_iters, dev_itrt, mo
     for epoch in range(1, config.epoch_num + 1):
         train_epoch(tb_lg, train_iters, train_itrt, model, fgm, optimizer, scheduler, epoch)
         torch.cuda.empty_cache()
-        val_metrics = evaluate(dev_iters, dev_itrt, model, mode='dev')
+        val_metrics = evaluate(dev_iters, dev_itrt, model, mode='dev', epoch=epoch)
         val_f1 = val_metrics['f1']
         logging.info("Epoch: {}, dev loss: {}, f1 score: {}".format(epoch, val_metrics['loss'], val_f1))
         improve_f1 = val_f1 - best_val_f1
@@ -136,7 +136,7 @@ def train(tb_lg: SummaryWriter, train_iters, train_itrt, dev_iters, dev_itrt, mo
     logging.info("Training Finished!")
 
 
-def evaluate(iters, itrt, model, mode='dev'):
+def evaluate(iters, itrt, model, mode='dev', epoch=-1):
     # set model to evaluation mode
     model.eval()
     if mode == 'test':
@@ -149,7 +149,7 @@ def evaluate(iters, itrt, model, mode='dev'):
     with torch.no_grad():
         bar = tqdm(range(iters), position=0, leave=True)
         for idx in bar:
-            bar.set_description(time_str())
+            bar.set_description(time_str() + f'[{epoch}]')
             batch_data, batch_token_starts, batch_labels = next(itrt)
             batch_data, batch_token_starts, batch_labels = batch_data.cuda(non_blocking=True), batch_token_starts.cuda(non_blocking=True), batch_labels.cuda(non_blocking=True)
             if mode == 'test':
