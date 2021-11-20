@@ -67,12 +67,13 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
         optimizer.step()
         scheduler.step()
         
-        if cur_iter % freq == 0:
+        global_iter = iters*epoch + cur_iter
+        if global_iter % freq == 0:
             logging.info(f' ep[{epoch:2d}]/[{config.epoch_num}] cur_loss={cur_loss:6.2f}')
-            tb_lg.add_scalar('iter/train_loss', cur_loss, iters*epoch + cur_iter)
-            tb_lg.add_scalar('norm/bert', bert_norm, iters*epoch + cur_iter)
-            tb_lg.add_scalar('norm/lstm', lstm_norm, iters*epoch + cur_iter)
-            tb_lg.add_scalar('norm/clsf', clsf_norm, iters*epoch + cur_iter)
+            tb_lg.add_scalar('iter/train_loss', cur_loss, global_iter)
+            tb_lg.add_scalar('norm/bert', bert_norm, global_iter)
+            tb_lg.add_scalar('norm/lstm', lstm_norm, global_iter)
+            tb_lg.add_scalar('norm/clsf', clsf_norm, global_iter)
         
         pred_tags.extend([[config.id2label.get(idx) for idx in indices] for indices in batch_output])
         true_tags.extend([[config.id2label.get(idx) for idx in indices if idx > -1] for indices in batch_labels.tolist()])
