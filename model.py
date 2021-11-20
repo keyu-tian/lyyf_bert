@@ -13,8 +13,8 @@ class BertNER(BertPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.bert = BertModel(config)
-        self.drop_before_lstm = nn.Dropout(proj_config.drop_rate)
-        self.drop_before_fc = nn.Dropout(proj_config.drop_rate)
+        self.drop_before_lstm = nn.Dropout(proj_config.drop1)
+        self.drop_before_fc = nn.Dropout(proj_config.drop2)
         self.bilstm = nn.LSTM(
             input_size=config.lstm_embedding_size,  # 1024
             hidden_size=config.hidden_size // 2,  # 1024
@@ -27,9 +27,9 @@ class BertNER(BertPreTrainedModel):
         self.crf = CRF(config.num_labels, batch_first=True)
 
         print(f"{time_str()} =========== config ===========", flush=True)
-        print(f"{time_str()} ==> dr before lstm : {proj_config.drop_rate}", flush=True)
+        print(f"{time_str()} ==> dr before lstm : {proj_config.drop1}", flush=True)
         print(f"{time_str()} ==> dr within lstm : {config.lstm_dropout_prob}", flush=True)
-        print(f"{time_str()} ==> dr before clsf : {proj_config.drop_rate}", flush=True)
+        print(f"{time_str()} ==> dr before clsf : {proj_config.drop2}", flush=True)
 
         self.init_weights()
 

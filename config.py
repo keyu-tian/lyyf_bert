@@ -74,9 +74,10 @@ epoch_num = eval(sys.argv[2])       # 50
 learning_rate = eval(sys.argv[3])   # 3e-5
 weight_decay = eval(sys.argv[4])    # 0.01
 clip_grad = eval(sys.argv[5])       # 5
-fgm_noise = eval(sys.argv[6])       # 0.05
-drop_rate = eval(sys.argv[7])       # 0.3
-loss_to = eval(sys.argv[8])         # 10    or -1
+fgm_noise = eval(sys.argv[6])       # 3
+drop1 = eval(sys.argv[7])           # 0.3
+drop2 = eval(sys.argv[8])           # 0.5
+loss_to = eval(sys.argv[9])         # 10    or -1
 
 
 min_epoch_num = round(epoch_num * 0.1)
@@ -90,7 +91,7 @@ tb_dir = os.path.join(
     f'_b{batch_size}ep{epoch_num}'
     f'_lr{learning_rate:g}wd{weight_decay}'
     f'_clp{clip_grad}fgm{fgm_noise}'
-    f'_drp{drop_rate}Lto{loss_to}'
+    f'_drp{drop1}Lto{loss_to}'
 )
 
 

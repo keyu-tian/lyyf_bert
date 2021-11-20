@@ -98,7 +98,7 @@ def run():
     logging.info(f"==> wd  : {config.weight_decay}")
     logging.info(f"==> clip: {config.clip_grad}")
     logging.info(f"==> fgm : {config.fgm_noise}")
-    logging.info(f"==> drop: {config.drop_rate}")
+    logging.info(f"==> drop: {config.drop1}")
     logging.info(f"==> L to: {config.loss_to}")
     logging.info(f"====== defaults ======")
     logging.info(f"==> min_epoch_num: {config.min_epoch_num}")
