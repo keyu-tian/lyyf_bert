@@ -190,7 +190,7 @@ def run():
 
     tb_lg = SummaryWriter(log_dir=config.tb_dir)
     best_val_f1 = train(tb_lg, train_iters, train_itrt, dev_iters, dev_itrt, model, fgm, optimizer, scheduler, config.save_dir)
-    config.badcase_path += f'{best_val_f1*100:2f}'
+    config.badcase_path += f'{best_val_f1*100:2f}.txt'
 
     time.sleep(5)
     tb_lg.close()
