@@ -25,7 +25,6 @@ def get_entities(seq):
     prev_type = ''
     begin_offset = 0
     chunks = []
-    print(seq)
     for i, chunk in enumerate(seq + ['O']):
         tag = chunk[0]
         type_ = chunk.split('-')[-1]

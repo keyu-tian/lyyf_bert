@@ -77,7 +77,7 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
             tb_lg.add_scalar('norm/clsf', clsf_norm, iters*epoch + cur_iter)
         
         pred_tags.extend([[config.id2label.get(idx) for idx in indices] for indices in batch_output])
-        true_tags.extend([[config.id2label.get(idx) for idx in indices if idx > -1] for indices in batch_labels])
+        true_tags.extend([[config.id2label.get(idx) for idx in indices if idx > -1] for indices in batch_labels.tolist()])
         
         del batch_data, batch_token_starts, batch_labels, loss
     
