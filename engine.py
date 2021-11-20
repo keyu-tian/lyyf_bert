@@ -3,14 +3,13 @@ import logging
 import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
-from tqdm import tqdm
 from transformers import BertTokenizer
 
 import config
 from adv import FGM
 from metrics import f1_score, bad_case
 from model import BertNER
-from utils import time_str, os_system
+from utils import os_system
 
 
 def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, scheduler, epoch):
@@ -22,9 +21,7 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
     # step number in one epoch: 336
     train_losses = 0
     freq = iters // 4
-    bar = tqdm(range(iters), position=0, leave=True)
-    for cur_iter in bar:
-        bar.set_description(time_str() + f'[{epoch}]')
+    for cur_iter in range(iters):
         batch_data, batch_token_starts, batch_labels = next(itrt)
         batch_data, batch_token_starts, batch_labels = batch_data.cuda(non_blocking=True), batch_token_starts.cuda(non_blocking=True), batch_labels.cuda(non_blocking=True)
         batch_masks = batch_data.gt(0)  # get padding mask
@@ -71,6 +68,7 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
         scheduler.step()
         
         if cur_iter % freq == 0:
+            logging.info(f' ep[{epoch:2d}]/[{config.epoch_num}] cur_loss={cur_loss:6.2f}')
             tb_lg.add_scalar('iter/train_loss', cur_loss, iters*epoch + cur_iter)
             tb_lg.add_scalar('norm/bert', bert_norm, iters*epoch + cur_iter)
             tb_lg.add_scalar('norm/lstm', lstm_norm, iters*epoch + cur_iter)
@@ -147,9 +145,7 @@ def evaluate(iters, itrt, model, mode='dev', epoch=-1):
     dev_losses = 0
 
     with torch.no_grad():
-        bar = tqdm(range(iters), position=0, leave=True)
-        for idx in bar:
-            bar.set_description(time_str() + f'[{epoch}]')
+        for idx in range(iters):
             batch_data, batch_token_starts, batch_labels = next(itrt)
             batch_data, batch_token_starts, batch_labels = batch_data.cuda(non_blocking=True), batch_token_starts.cuda(non_blocking=True), batch_labels.cuda(non_blocking=True)
             if mode == 'test':
