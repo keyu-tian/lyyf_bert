@@ -88,7 +88,8 @@ tb_dir = os.path.join(
     os.environ['ARNOLD_OUTPUT'],
     f'tb_b{batch_size}ep{epoch_num}_'
     f'lr{learning_rate:g}wd{weight_decay}_'
-    f'clp{clip_grad}_fgm{fgm_noise}'
+    f'clp{clip_grad}fgm{fgm_noise}_'
+    f'drp{drop_rate}Lto{loss_to}'
 )
 
 
