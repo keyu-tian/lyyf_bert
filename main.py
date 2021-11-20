@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 import warnings
 
@@ -189,6 +190,7 @@ def run():
     utils.os_system(f'hdfs dfs -put -f {config.log_path} {config.hdfs_localout}')
     utils.os_system(f'hdfs dfs -put -f {config.badcase_path} {config.hdfs_localout}')
     utils.os_system(f'hdfs dfs -put -f {config.ckpt_path} {config.hdfs_localout}')
+    print(f'[bad_case.txt] see {os.path.join(config.hdfs_localout, os.path.basename(config.badcase_path))}')
     
 
 if __name__ == '__main__':
