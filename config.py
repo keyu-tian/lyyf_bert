@@ -96,7 +96,7 @@ tb_dir = os.path.join(
 badcase_path = os.path.join(
     os.getcwd(),
     'case',
-    f'{os.environ["ARNOLD_TRIAL_ID"]}_' + os.path.basename(tb_dir) + '_'
+    f'xxxx_{os.environ["ARNOLD_TRIAL_ID"]}_{os.path.basename(tb_dir)}.txt'
 )
 
 
