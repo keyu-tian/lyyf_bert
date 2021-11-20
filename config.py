@@ -82,7 +82,7 @@ loss_to = eval(sys.argv[10])        # 10    or -1
 
 min_epoch_num = round(epoch_num * 0.3)
 patience = 0.0002
-patience_num = round(epoch_num * 0.3)
+patience_num = round(epoch_num * 0.5)
 
 hdfs_localout = os.path.join(os.environ['ARNOLD_OUTPUT'], 'local_output')
 tb_dir = os.path.join(
