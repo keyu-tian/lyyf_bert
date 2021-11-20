@@ -80,7 +80,7 @@ drop2 = eval(sys.argv[9])           # 0.5
 loss_to = eval(sys.argv[10])        # 10    or -1
 
 
-min_epoch_num = round(epoch_num * 0.1)
+min_epoch_num = round(epoch_num * 0.3)
 patience = 0.0002
 patience_num = round(epoch_num * 0.3)
 

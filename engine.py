@@ -84,8 +84,8 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
     train_f1 = f1_score(true_tags, pred_tags, mode='dev') # todo: lyyf看mode='dev'对不对？
     train_loss = float(train_losses) / iters
     logging.info(f"Epoch: {epoch:-3d}/{epoch}, train loss: {train_loss}, train f1: {train_f1}")
-    tb_lg.add_scalar('epoch/train_loss', train_loss, epoch)
-    tb_lg.add_scalar('epoch/train_f1', train_f1, epoch)
+    tb_lg.add_scalar('epoch_train/train_loss', train_loss, epoch)
+    tb_lg.add_scalar('epoch_train/train_f1', train_f1, epoch)
     tb_lg.flush()
 
 
@@ -107,12 +107,6 @@ def train(tb_lg: SummaryWriter, train_iters, train_itrt, dev_iters, dev_itrt, mo
         logging.info("Epoch: {}, dev loss: {}, f1 score: {}".format(epoch, val_metrics['loss'], val_f1))
         improve_f1 = val_f1 - best_val_f1
 
-        tb_lg.add_scalar('epoch/val_loss', val_metrics['loss'], epoch)
-        tb_lg.add_scalar('epoch/val_F1', val_f1, epoch)
-        tb_lg.add_scalar('epoch/improve_f1', improve_f1, epoch)
-        tb_lg.add_scalar('epoch/zpatience_cnt', patience_counter, epoch)
-        tb_lg.flush()
-        
         if improve_f1 > 1e-5:
             best_val_f1 = val_f1
             model.save_pretrained(model_dir)
@@ -124,6 +118,14 @@ def train(tb_lg: SummaryWriter, train_iters, train_itrt, dev_iters, dev_itrt, mo
         else:
             patience_counter += 1
         # Early stopping and logging best f1
+
+        tb_lg.add_scalar('epoch_val/0_best_val_F1', best_val_f1, epoch)
+        tb_lg.add_scalar('epoch_val/0_val_F1', val_f1, epoch)
+        tb_lg.add_scalar('epoch_val/0_val_loss', val_metrics['loss'], epoch)
+        tb_lg.add_scalar('epoch_val/1_improve_F1', improve_f1, epoch)
+        tb_lg.add_scalar('epoch_val/1_patience_cnt', patience_counter, epoch)
+        tb_lg.flush()
+        
         if (patience_counter >= config.patience_num and epoch > config.min_epoch_num) or epoch == config.epoch_num:
             logging.info("Best val f1: {}".format(best_val_f1))
             break
