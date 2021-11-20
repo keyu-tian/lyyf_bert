@@ -86,10 +86,11 @@ patience_num = round(epoch_num * 0.3)
 hdfs_localout = os.path.join(os.environ['ARNOLD_OUTPUT'], 'local_output')
 tb_dir = os.path.join(
     os.environ['ARNOLD_OUTPUT'],
-    f'tb_b{batch_size}ep{epoch_num}_'
-    f'lr{learning_rate:g}wd{weight_decay}_'
-    f'clp{clip_grad}fgm{fgm_noise}_'
-    f'drp{drop_rate}Lto{loss_to}'
+    f'tb'
+    f'_b{batch_size}ep{epoch_num}'
+    f'_lr{learning_rate:g}wd{weight_decay}'
+    f'_clp{clip_grad}fgm{fgm_noise}'
+    f'_drp{drop_rate}Lto{loss_to}'
 )
 
 
