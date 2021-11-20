@@ -137,7 +137,8 @@ def train(tb_lg: SummaryWriter, train_iters, train_itrt, dev_iters, dev_itrt, mo
         if epoch == config.epoch_num or epoch % 6 == 0:
             os_system(f'hdfs dfs -put -f {config.log_path} {config.hdfs_localout}')
         
-    logging.info("Training Finished!")
+    logging.info('Training Finished!' + ' ' * 70 + f'[best_val_f1]  {best_val_f1*100:.2f} ({best_val_f1*100})')
+    return best_val_f1
 
 
 def evaluate(iters, itrt, model, mode='dev', epoch=-1):

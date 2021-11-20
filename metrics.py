@@ -180,8 +180,8 @@ def bad_case(y_true, y_pred, data):
     
 
 
-if __name__ == "__main__":
-    y_t = [['O', 'O', 'O', 'B-address', 'I-address', 'I-address', 'O'], ['B-name', 'I-name', 'O']]
-    y_p = [['O', 'O', 'B-address', 'I-address', 'I-address', 'I-address', 'O'], ['B-name', 'I-name', 'O']]
-    sent = [['十', '一', '月', '中', '山', '路', '电'], ['周', '静', '说']]
-    bad_case(y_t, y_p, sent)
+# if __name__ == "__main__":
+#     y_t = [['O', 'O', 'O', 'B-address', 'I-address', 'I-address', 'O'], ['B-name', 'I-name', 'O']]
+#     y_p = [['O', 'O', 'B-address', 'I-address', 'I-address', 'I-address', 'O'], ['B-name', 'I-name', 'O']]
+#     sent = [['十', '一', '月', '中', '山', '路', '电'], ['周', '静', '说']]
+#     bad_case(y_t, y_p, sent)

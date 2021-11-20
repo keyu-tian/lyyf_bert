@@ -56,7 +56,6 @@ save_dir = os.getcwd() + '/experiments/clue/'
 ckpt_path = save_dir + 'pytorch_model.bin'
 time_str = datetime.datetime.now().strftime("%m-%d__%H-%M-%S")
 log_path = save_dir + 'log.txt'
-badcase_path = os.getcwd() + '/case/bad_case.txt'
 
 # 训练集、验证集划分比例
 dev_split_size = 0.1
@@ -93,6 +92,11 @@ tb_dir = os.path.join(
     f'_clp{clip_grad}fgm{fgm_noise:.0e}'
     f'_drp{drop1}_{drop2}'
     f'_Lto{loss_to}'
+)
+badcase_path = os.path.join(
+    os.getcwd(),
+    'case',
+    f'{os.environ["ARNOLD_TRIAL_ID"]}_' + os.path.basename(tb_dir) + '_'
 )
 
 
