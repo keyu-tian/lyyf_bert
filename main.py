@@ -63,7 +63,9 @@ def test():
     val_f1_labels = val_metrics['f1_labels']
     for label in config.labels:
         logging.info("f1 score of {}: {}".format(label, val_f1_labels[label]))
-        
+
+    utils.os_system(f'hdfs dfs -put -f {config.log_path} {config.hdfs_localout}')
+    utils.os_system(f'hdfs dfs -put -f {config.ckpt_path} {config.hdfs_localout}')
     utils.os_system(f'hdfs dfs -put -f {config.badcase_path} {config.hdfs_localout}')
     print(f'[bad_case.txt] see {os.path.join(config.hdfs_localout, os.path.basename(config.badcase_path))}')
 
