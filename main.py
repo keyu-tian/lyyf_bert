@@ -182,6 +182,8 @@ def run():
                                                 num_warmup_steps=config.epoch_num * train_iters // 10,
                                                 num_training_steps=config.epoch_num * train_iters)
 
+    scheduler.get_last_lr()
+
     # Train the model
     logging.info("--------Start Training!--------")
     fgm = FGM(model, config.fgm_noise)

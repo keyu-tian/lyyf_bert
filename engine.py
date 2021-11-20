@@ -66,6 +66,8 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
 
         optimizer.step()
         scheduler.step()
+
+        last_lr = scheduler.get_last_lr()
         
         global_iter = iters*epoch + cur_iter
         if global_iter % freq == 0:
@@ -74,6 +76,8 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
             tb_lg.add_scalar('norm/bert', bert_norm, global_iter)
             tb_lg.add_scalar('norm/lstm', lstm_norm, global_iter)
             tb_lg.add_scalar('norm/clsf', clsf_norm, global_iter)
+            tb_lg.add_scalar('opt_lr/max_lr', max(last_lr), global_iter)
+            tb_lg.add_scalar('opt_lr/min_lr', min(last_lr), global_iter)
         
         pred_tags.extend([[config.id2label.get(idx) for idx in indices] for indices in batch_output])
         true_tags.extend([[config.id2label.get(idx) for idx in indices if idx > -1] for indices in batch_labels.tolist()])
