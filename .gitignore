@@ -1,4 +1,4 @@
-
+log.txt
 *.log
 *.bin
 .ipynb_checkpoints/

@@ -14,8 +14,8 @@ from adv import FGM
 from dataloader import InfiniteBatchSampler
 from datapre import Processor
 from dataset import NERDataset
+from engine import train, evaluate
 from model import BertNER
-from train import train, evaluate
 
 warnings.filterwarnings('ignore')
 
@@ -49,10 +49,10 @@ def test():
     
     logging.info("--------Get Data-loader!--------")
     # Prepare model
-    if config.model_dir is not None:
-        model = BertNER.from_pretrained(config.model_dir)
+    if config.save_dir is not None:
+        model = BertNER.from_pretrained(config.save_dir)
         model.cuda()
-        logging.info("--------Load model from {}--------".format(config.model_dir))
+        logging.info("--------Load model from {}--------".format(config.save_dir))
     else:
         logging.info("--------No model to test !--------")
         return
@@ -62,8 +62,6 @@ def test():
     val_f1_labels = val_metrics['f1_labels']
     for label in config.labels:
         logging.info("f1 score of {}: {}".format(label, val_f1_labels[label]))
-
-    utils.os_system(f'hdfs dfs -put data/clue/test* {config.hdfs_out}')
 
 
 def load_dev(mode):
@@ -87,8 +85,9 @@ def load_dev(mode):
 
 def run():
     """train the model"""
+    utils.os_system(f'hdfs dfs -mkdir {config.hdfs_localout}')
     # set the logger
-    utils.set_logger(config.log_dir)
+    utils.set_logger(config.log_path)
     logging.info("device: {}".format(config.device))
 
     logging.info(f"======= config =======")
@@ -98,6 +97,8 @@ def run():
     logging.info(f"==> wd  : {config.weight_decay}")
     logging.info(f"==> clip: {config.clip_grad}")
     logging.info(f"==> fgm : {config.fgm_noise}")
+    logging.info(f"==> drop: {config.drop_rate}")
+    logging.info(f"==> L to: {config.loss_to}")
     logging.info(f"====== defaults ======")
     logging.info(f"==> min_epoch_num: {config.min_epoch_num}")
     logging.info(f"==> patience: {config.patience}")
@@ -180,13 +181,14 @@ def run():
     fgm = FGM(model, config.fgm_noise)
 
     tb_lg = SummaryWriter(log_dir=config.tb_dir)
-    train(tb_lg, train_iters, train_itrt, dev_iters, dev_itrt, model, fgm, optimizer, scheduler, config.model_dir)
+    train(tb_lg, train_iters, train_itrt, dev_iters, dev_itrt, model, fgm, optimizer, scheduler, config.save_dir)
 
     time.sleep(5)
     tb_lg.close()
 
-    utils.os_system(f'hdfs dfs -put {config.log_dir} {config.hdfs_out}')
-    utils.os_system(f'hdfs dfs -put {config.ckpt_dir} {config.hdfs_out}')
+    utils.os_system(f'hdfs dfs -put -f {config.log_path} {config.hdfs_localout}')
+    utils.os_system(f'hdfs dfs -put -f {config.badcase_path} {config.hdfs_localout}')
+    utils.os_system(f'hdfs dfs -put -f {config.ckpt_path} {config.hdfs_localout}')
     
 
 if __name__ == '__main__':

@@ -162,18 +162,22 @@ def f1_score(y_true, y_pred, mode='dev'):
 
 
 def bad_case(y_true, y_pred, data):
-    if not os.path.exists(config.case_dir):
-        os.system(r"touch {}".format(config.case_dir))  # 调用系统命令行来创建文件
-    output = open(config.case_dir, 'w')
-    for idx, (t, p) in enumerate(zip(y_true, y_pred)):
-        if t == p:
-            continue
-        else:
-            output.write("bad case " + str(idx) + ": \n")
-            output.write("sentence: " + str(data[idx]) + "\n")
-            output.write("golden label: " + str(t) + "\n")
-            output.write("model pred: " + str(p) + "\n")
+    case_dir = os.path.dirname(config.badcase_path)
+    if not os.path.exists(case_dir):
+        os.makedirs(case_dir)
+    os.system(f'rm -rf {config.badcase_path}')
+    
+    with open(config.badcase_path, 'w') as output:
+        for idx, (t, p) in enumerate(zip(y_true, y_pred)):
+            if t == p:
+                continue
+            else:
+                output.write("bad case " + str(idx) + ": \n")
+                output.write("sentence: " + str(data[idx]) + "\n")
+                output.write("golden label: " + str(t) + "\n")
+                output.write("model pred: " + str(p) + "\n")
     logging.info("--------Bad Cases reserved !--------")
+    
 
 
 if __name__ == "__main__":

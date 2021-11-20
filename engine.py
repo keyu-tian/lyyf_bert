@@ -10,6 +10,7 @@ import config
 from adv import FGM
 from metrics import f1_score, bad_case
 from model import BertNER
+from utils import time_str, os_system
 
 
 def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, scheduler, epoch):
@@ -18,7 +19,9 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
     # step number in one epoch: 336
     train_losses = 0
     freq = iters // 4
-    for cur_iter in tqdm(range(iters), position=0, leave=True):
+    bar = tqdm(range(iters), position=0, leave=True)
+    for cur_iter in bar:
+        bar.set_description(time_str())
         batch_data, batch_token_starts, batch_labels = next(itrt)
         batch_data, batch_token_starts, batch_labels = batch_data.cuda(non_blocking=True), batch_token_starts.cuda(non_blocking=True), batch_labels.cuda(non_blocking=True)
         batch_masks = batch_data.gt(0)  # get padding mask
@@ -29,9 +32,16 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
         train_losses += cur_loss
         # clear previous gradients, compute gradients of all variables wrt loss
         model.zero_grad()
+        if config.loss_to > 0:
+            tp = cur_loss
+            while tp > config.loss_to:
+                tp /= config.loss_to
+                loss /= config.loss_to
         loss.backward()
         # gradient clipping
-        total_norm = nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=config.clip_grad)
+        bert_norm = nn.utils.clip_grad_norm_(parameters=model.bert.parameters(), max_norm=config.clip_grad)
+        lstm_norm = nn.utils.clip_grad_norm_(parameters=model.bilstm.parameters(), max_norm=config.clip_grad)
+        clsf_norm = nn.utils.clip_grad_norm_(parameters=model.classifier.parameters(), max_norm=config.clip_grad)
         # performs updates using calculated gradients
 
         if fgm.open():
@@ -39,8 +49,16 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
             model.zero_grad()
             loss = model((batch_data, batch_token_starts),
                          token_type_ids=None, attention_mask=batch_masks, labels=batch_labels)[0]
+            cur_loss = loss.item()
+            if config.loss_to > 0:
+                tp = cur_loss
+                while tp > config.loss_to:
+                    tp /= config.loss_to
+                    loss /= config.loss_to
             loss.backward()
-            total_norm = nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=config.clip_grad)
+            bert_norm = nn.utils.clip_grad_norm_(parameters=model.bert.parameters(), max_norm=config.clip_grad)
+            lstm_norm = nn.utils.clip_grad_norm_(parameters=model.bilstm.parameters(), max_norm=config.clip_grad)
+            clsf_norm = nn.utils.clip_grad_norm_(parameters=model.classifier.parameters(), max_norm=config.clip_grad)
             fgm.restore()
 
         optimizer.step()
@@ -48,7 +66,9 @@ def train_epoch(tb_lg, iters, itrt, model: BertNER, fgm: FGM, optimizer, schedul
         
         if cur_iter % freq == 0:
             tb_lg.add_scalar('iter/train_loss', cur_loss, iters*epoch + cur_iter)
-            tb_lg.add_scalar('iter/norm', total_norm, iters*epoch + cur_iter)
+            tb_lg.add_scalar('norm/bert', bert_norm, iters*epoch + cur_iter)
+            tb_lg.add_scalar('norm/lstm', lstm_norm, iters*epoch + cur_iter)
+            tb_lg.add_scalar('norm/clsf', clsf_norm, iters*epoch + cur_iter)
         
         del batch_data, batch_token_starts, batch_labels, loss
     
@@ -96,6 +116,10 @@ def train(tb_lg: SummaryWriter, train_iters, train_itrt, dev_iters, dev_itrt, mo
         if (patience_counter >= config.patience_num and epoch > config.min_epoch_num) or epoch == config.epoch_num:
             logging.info("Best val f1: {}".format(best_val_f1))
             break
+        
+        if epoch == config.epoch_num or epoch % 4 == 0:
+            os_system(f'hdfs dfs -put -f {config.log_path} {config.hdfs_localout}')
+        
     logging.info("Training Finished!")
 
 
@@ -111,7 +135,9 @@ def evaluate(iters, itrt, model, mode='dev'):
     dev_losses = 0
 
     with torch.no_grad():
-        for idx in tqdm(range(iters), position=0, leave=True):
+        bar = tqdm(range(iters), position=0, leave=True)
+        for idx in bar:
+            bar.set_description(time_str())
             batch_data, batch_token_starts, batch_tags = next(itrt)
             batch_data, batch_token_starts, batch_tags = batch_data.cuda(non_blocking=True), batch_token_starts.cuda(non_blocking=True), batch_tags.cuda(non_blocking=True)
             if mode == 'test':

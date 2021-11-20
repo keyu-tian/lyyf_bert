@@ -29,7 +29,7 @@ hdfs dfs -get hdfs://haruna/home/byte_arnold_hl_vc/user/tiankeyu/bert_ckpt/chine
 # 64 50 1e-4 0.01 5 0.05
 
 print "LYYF.BERT training ..."
-python run.py "$@"
+python main.py "$@"
 
 if [ $? -ne 0 ]; then
     print "[failed] LYYF.BERT training failed"

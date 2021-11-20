@@ -52,11 +52,11 @@ test_dir = data_dir + 'test.npz'
 files = ['train', 'test']
 bert_model = 'pretrained_bert_models/bert-base-chinese/'
 roberta_model = 'pretrained_bert_models/chinese_roberta_wwm_large_ext/'
-model_dir = os.getcwd() + '/experiments/clue/'
-ckpt_dir = model_dir + 'pytorch_model.bin'
+save_dir = os.getcwd() + '/experiments/clue/'
+ckpt_path = save_dir + 'pytorch_model.bin'
 time_str = datetime.datetime.now().strftime("%m-%d__%H-%M-%S")
-log_dir = model_dir + f'train-{time_str}.log'
-case_dir = os.getcwd() + '/case/bad_case.txt'
+log_path = save_dir + 'log.txt'
+badcase_path = os.getcwd() + '/case/bad_case.txt'
 
 # 训练集、验证集划分比例
 dev_split_size = 0.1
@@ -68,21 +68,24 @@ load_before = False
 full_fine_tuning = True
 
 # hyper-parameter
-# 16 50 3e-5 0.01 5 0.05
+# 16 30 1e-5 0.1 50 10 0.3 -1
 batch_size = eval(sys.argv[1])      # 16
 epoch_num = eval(sys.argv[2])       # 50
 learning_rate = eval(sys.argv[3])   # 3e-5
 weight_decay = eval(sys.argv[4])    # 0.01
 clip_grad = eval(sys.argv[5])       # 5
 fgm_noise = eval(sys.argv[6])       # 0.05
+drop_rate = eval(sys.argv[7])       # 0.3
+loss_to = eval(sys.argv[8])         # 10    or -1
+
 
 min_epoch_num = round(epoch_num * 0.1)
 patience = 0.0002
 patience_num = round(epoch_num * 0.3)
 
-hdfs_out = os.environ['ARNOLD_OUTPUT']
+hdfs_localout = os.path.join(os.environ['ARNOLD_OUTPUT'], 'local_output')
 tb_dir = os.path.join(
-    hdfs_out,
+    os.environ['ARNOLD_OUTPUT'],
     f'tb_b{batch_size}ep{epoch_num}_'
     f'lr{learning_rate:g}wd{weight_decay}_'
     f'clp{clip_grad}_fgm{fgm_noise}'

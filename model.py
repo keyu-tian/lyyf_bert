@@ -3,6 +3,8 @@ from transformers import BertPreTrainedModel, BertModel
 import torch.nn as nn
 from torch.nn.utils.rnn import pad_sequence
 
+import config as proj_config
+
 
 class BertNER(BertPreTrainedModel):
     def __init__(self, config):
@@ -10,7 +12,8 @@ class BertNER(BertPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.bert = BertModel(config)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.drop_before_lstm = nn.Dropout(proj_config.drop_rate)
+        self.drop_before_fc = nn.Dropout(proj_config.drop_rate)
         self.bilstm = nn.LSTM(
             input_size=config.lstm_embedding_size,  # 1024
             hidden_size=config.hidden_size // 2,  # 1024
@@ -21,6 +24,11 @@ class BertNER(BertPreTrainedModel):
         )
         self.classifier = nn.Linear(config.hidden_size, config.num_labels)
         self.crf = CRF(config.num_labels, batch_first=True)
+
+        print(f"=========== config ===========", flush=True)
+        print(f"==> dr before lstm : {proj_config.drop_rate}", flush=True)
+        print(f"==> dr within lstm : {config.lstm_dropout_prob}", flush=True)
+        print(f"==> dr before clsf : {proj_config.drop_rate}", flush=True)
 
         self.init_weights()
 
@@ -41,10 +49,11 @@ class BertNER(BertPreTrainedModel):
         # 将sequence_output的pred_label维度padding到最大长度
         padded_sequence_output = pad_sequence(origin_sequence_output, batch_first=True)
         # dropout pred_label的一部分feature
-        padded_sequence_output = self.dropout(padded_sequence_output)
+        padded_sequence_output = self.drop_before_lstm(padded_sequence_output)
         lstm_output, _ = self.bilstm(padded_sequence_output)
         # 得到判别值
-        # todo: 大dropout，而且可以不止1层
+        
+        self.drop_before_fc(lstm_output)
         logits = self.classifier(lstm_output)
         outputs = (logits,)
         if labels is not None:
